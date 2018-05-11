@@ -7,15 +7,17 @@ from pyparser.Source import Source
 from pyparser.Parser import ParserFromGenerator
 
 
-esc = Parsers.char('\\') >> (
-    Parsers.char('\"').result(r'\"') |
-    Parsers.char('\\').result(r'\\') |
-    Parsers.char('\'').result(r'\'')
-)
-alpha = Parsers.any_of(lambda c: c != '\'' and c != '"')
+esc = Parsers.char('\\') >> (Parsers.char('\"') | Parsers.char('\\') | Parsers.char('\''))
+alpha = Parsers.any_of(lambda c: c != '\'' and c != '"' and c != '\\')
 
-parser = (alpha | esc)[1:] > ''.join
+@ParserFromGenerator
+def str_parser():
+    yield Parsers.char('"')
+    contents = yield (alpha | esc)[1:] > ''.join
+    yield Parsers.char('"')
+    yield contents
 
-src = Source(r'abc\"')
-print src.string
-print parser(src)
+src = Source(r'"abc\""')
+print str_parser
+print str_parser()
+print str_parser()(src)
