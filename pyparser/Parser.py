@@ -32,10 +32,10 @@ class Parser:
             return Result.success(fn(result.value), result.reminder) if result.is_successful else result
         return fmap
 
-    def bind(self, fn):
+    def bind(self, other):
         '''
         Monadic bind op
-        :param fn: Function of type (A -> Parser<B>)
+        :param other: Function of type (A -> Parser<B>)
         :return: Parser<B>
         '''
         @Parser
@@ -43,7 +43,7 @@ class Parser:
             result = self(input)
             if result.is_failed:
                 return result
-            return fn(result.value)(result.reminder)
+            return other(result.value)(result.reminder)
         return bind
 
     def one_or_many(self, start):
@@ -90,6 +90,16 @@ class Parser:
             return Result.success(result, reminder)
         return times
 
+    def then(self, other):
+        @Parser
+        def then(input):
+            parsed = self(input)
+            if parsed.is_successful:
+                return other(parsed.reminder)
+            else:
+                return parsed
+        return then
+
     def result(self, value):
         @Parser
         def result(input):
@@ -112,6 +122,9 @@ class Parser:
     def __gt__(self, other):
         return self.fmap(other)
 
+    def __rshift__(self, other):
+        return self.then(other)
+
     def __getitem__(self, item):
         if isinstance(item, slice):
             start, stop = item.start, item.stop
@@ -130,3 +143,26 @@ class Parser:
         if start > 0 and stop == sys.maxint:
             return self.one_or_many(start)
         raise NotImplementedError('Slice is not supported')
+
+
+class ParserFromGenerator:
+    def __init__(self, generator):
+        self.generator = generator
+
+    def __call__(self, *args, **kwargs):
+        @Parser
+        def generator(input):
+            iter = self.generator()
+            value = None
+            src = input
+            while True:
+                parser = iter.send(value)
+                if not isinstance(parser, Parser):
+                    return Result.success(parser, src)
+                parsed = parser(src)
+                if parsed.is_successful:
+                    value = parsed.value
+                    src = parsed.reminder
+                else:
+                    return parsed
+        return generator

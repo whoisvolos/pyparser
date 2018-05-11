@@ -22,7 +22,7 @@ class Parsers:
 
     @staticmethod
     def char(chr):
-        return Parsers.any_of(lambda c: c == chr, expected_str='\'{}\''.format(c))
+        return Parsers.any_of(lambda c: c == chr, expected_str='\'{}\''.format(chr))
 
     @staticmethod
     def eof():
@@ -59,6 +59,10 @@ class Parsers:
             else:
                 return Result.failure(ParseException('\'{}\' not found'.format(arg)), input)
         return string
+
+    @staticmethod
+    def whitespace():
+        return Parsers.any_of(lambda c: c.isspace(), expected_str='whitespace')
 
     @staticmethod
     def regex(r):
