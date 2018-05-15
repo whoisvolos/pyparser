@@ -75,6 +75,17 @@ class Parser:
             return Result.success(result, parsed.reminder)
         return zero_or_many
 
+    @property
+    def optional(self):
+        @Parser
+        def optional(input):
+            parsed = self(input)
+            if parsed.is_successful:
+                return parsed
+            else:
+                return Result.success(None, input)
+        return optional
+
     def times(self, x):
         @Parser
         def times(input):
@@ -100,6 +111,20 @@ class Parser:
                 return parsed
         return then
 
+    def prior(self, other):
+        @Parser
+        def prior(input):
+            parsed = self(input)
+            if parsed.is_successful:
+                next_parsed = other(parsed.reminder)
+                if next_parsed.is_successful:
+                    return Result.success(parsed.value, next_parsed.reminder)
+                else:
+                    return Result.failure(next_parsed.error, input)
+            else:
+                return parsed
+        return prior
+
     def result(self, value):
         @Parser
         def result(input):
@@ -109,6 +134,9 @@ class Parser:
             else:
                 return parsed
         return result
+
+    def __lshift__(self, other):
+        return self.prior(other)
 
     def __mul__(self, other):
         return self.times(other)
