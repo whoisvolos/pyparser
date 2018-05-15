@@ -20,10 +20,10 @@ class NumberExpr:
         return self.number
 
     def __str__(self):
-        return str(self.number)
+        return str(long(self.number)) if self.number.is_integer() else str(self.number)
 
     def __repr__(self):
-        return str(self.number)
+        return str(long(self.number)) if self.number.is_integer() else str(self.number)
 
 class Expr:
     def __init__(self, op, exprs):
@@ -39,6 +39,7 @@ class Expr:
         if self.is_memo:
             return self.value
 
+        fn = None
         if self.op == '+':
             fn = lambda acc, e: acc + e.reduce()
         elif self.op == '-':
@@ -50,8 +51,15 @@ class Expr:
         self.value = reduce(fn, self.exprs[1:], self.exprs[0].reduce())
         return self.value
 
+    @staticmethod
+    def _stringify_expr(expr):
+        if isinstance(expr, NumberExpr):
+            return str(expr)
+        else:
+            return '({} {})'.format(expr.op, ' '.join(str(e) for e in expr.exprs))
+
     def __str__(self):
-        return '{} {}'.format(self.op, self.exprs)
+        return self.op + ' ' + ' '.join(map(Expr._stringify_expr, self.exprs))
 
 
 @ParserFromGenerator
